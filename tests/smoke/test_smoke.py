@@ -5,12 +5,12 @@ seeds sample warehouse tables, runs freshness & quality checks,
 and asserts successful execution.
 """
 
-import os
 import subprocess
 import time
-import pytest
+
 import httpx
 import psycopg2
+import pytest
 
 # Configuration
 API_URL = "http://localhost:8005"
@@ -41,7 +41,7 @@ def docker_stack():
         )
 
     print("\n[Smoke Test] Starting docker-compose.test.yml stack...")
-    
+
     # Force pull/rebuild and start services in background
     up_cmd = ["docker", "compose", "-f", "docker-compose.test.yml", "up", "-d", "--build"]
     result = subprocess.run(up_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -52,7 +52,7 @@ def docker_stack():
     max_retries = 30
     ready = False
     print("[Smoke Test] Waiting for backend readiness at http://localhost:8005/healthz...")
-    
+
     for i in range(max_retries):
         try:
             # Check the /healthz endpoint of backend
@@ -71,7 +71,7 @@ def docker_stack():
         # Capture logs before failing
         logs = subprocess.run(["docker", "compose", "-f", "docker-compose.test.yml", "logs"], stdout=subprocess.PIPE, text=True)
         print("\n=== Docker Compose Logs ===\n", logs.stdout)
-        
+
         # Stop stack
         subprocess.run(["docker", "compose", "-f", "docker-compose.test.yml", "down", "-v"])
         pytest.fail("Backend or Database service failed to become ready within the timeout period.")
@@ -81,15 +81,15 @@ def docker_stack():
         setup_warehouse_tables()
     except Exception as e:
         # Capture logs and teardown
-        logs = subprocess.run(["docker", "compose", "-f", "docker-compose.test.yml", "logs"], stdout=subprocess.PIPE, text=True)
+        logs = subprocess.run(["docker", "compose", "-p", "teststack", "-f", "docker-compose.test.yml", "logs"], stdout=subprocess.PIPE, text=True)
         print("\n=== Docker Compose Logs ===\n", logs.stdout)
-        subprocess.run(["docker", "compose", "-f", "docker-compose.test.yml", "down", "-v"])
+        subprocess.run(["docker", "compose", "-p", "teststack", "-f", "docker-compose.test.yml", "down", "-v"])
         pytest.fail(f"Failed to setup target warehouse tables in database: {e}")
 
     yield
 
     print("\n[Smoke Test] Tearing down docker-compose.test.yml stack...")
-    subprocess.run(["docker", "compose", "-f", "docker-compose.test.yml", "down", "-v"])
+    subprocess.run(["docker", "compose", "-p", "teststack", "-f", "docker-compose.test.yml", "down", "-v"])
 
 def setup_warehouse_tables():
     """Create sample target tables in the testing database to act as the warehouse."""
@@ -99,7 +99,7 @@ def setup_warehouse_tables():
     with conn.cursor() as cur:
         # Create schema public tables
         print("[Smoke Test] Creating sample warehouse tables...")
-        
+
         # 1. Orders table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS orders (
@@ -109,7 +109,7 @@ def setup_warehouse_tables():
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             );
         """)
-        
+
         # 2. Order items table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS order_items (
@@ -119,7 +119,7 @@ def setup_warehouse_tables():
                 quantity INT
             );
         """)
-        
+
         # 3. Customers table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS customers (
@@ -137,10 +137,10 @@ def setup_warehouse_tables():
 
         # Insert customers
         cur.execute("INSERT INTO customers (id, name) VALUES (1, 'Alice'), (2, 'Bob');")
-        
+
         # Insert orders
         cur.execute("INSERT INTO orders (id, amount, status) VALUES (1, 99.99, 'completed'), (2, 49.50, 'pending');")
-        
+
         # Insert order items (no orphans to satisfy quality custom check)
         cur.execute("INSERT INTO order_items (order_id, price, quantity) VALUES (1, 99.99, 1), (2, 49.50, 1);")
 
@@ -165,7 +165,7 @@ def test_freshness_poll():
     data = response.json()
     assert "checked" in data
     assert data["checked"] > 0
-    
+
     # Assert that public.orders was checked successfully
     checked_tables = [res["table"] for res in data["results"] if "error" not in res]
     assert "public.orders" in checked_tables
@@ -179,11 +179,11 @@ def test_quality_checks_run():
     data = response.json()
     assert "checks_run" in data
     assert data["checks_run"] > 0
-    
+
     # Assert that results are returned
     results = data["results"]
     assert len(results) > 0
-    
+
     # Verify our seeded tables passed the custom SQL check
     custom_sql_passes = [res for res in results if res.get("engine") == "custom_sql" and res.get("passed") is True]
     assert len(custom_sql_passes) > 0
@@ -196,7 +196,7 @@ def test_status_endpoint():
     data = response.json()
     assert "summary" in data
     assert "tables" in data
-    
+
     # The summary should show healthy tables
     summary = data["summary"]
     assert (summary["healthy"] + summary["warn"] + summary["fail"]) > 0
