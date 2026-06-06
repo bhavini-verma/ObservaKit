@@ -261,7 +261,7 @@ async def get_status():
 
     db = SessionLocal()
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         cutoff_24h = now - timedelta(hours=24)
 
         # ---- Collect most-recent record per table for each pillar ----

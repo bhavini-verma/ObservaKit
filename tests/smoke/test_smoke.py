@@ -43,7 +43,7 @@ def docker_stack():
     print("\n[Smoke Test] Starting docker-compose.test.yml stack...")
 
     # Force pull/rebuild and start services in background
-    up_cmd = ["docker", "compose", "-f", "docker-compose.test.yml", "up", "-d", "--build"]
+    up_cmd = ["docker", "compose", "-p", "teststack", "-f", "docker-compose.test.yml", "up", "-d", "--build"]
     result = subprocess.run(up_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if result.returncode != 0:
         pytest.fail(f"Failed to start Docker Compose stack: {result.stderr}")
@@ -69,11 +69,11 @@ def docker_stack():
 
     if not ready:
         # Capture logs before failing
-        logs = subprocess.run(["docker", "compose", "-f", "docker-compose.test.yml", "logs"], stdout=subprocess.PIPE, text=True)
+        logs = subprocess.run(["docker", "compose", "-p", "teststack", "-f", "docker-compose.test.yml", "logs"], stdout=subprocess.PIPE, text=True)
         print("\n=== Docker Compose Logs ===\n", logs.stdout)
 
         # Stop stack
-        subprocess.run(["docker", "compose", "-f", "docker-compose.test.yml", "down", "-v"])
+        subprocess.run(["docker", "compose", "-p", "teststack", "-f", "docker-compose.test.yml", "down", "-v"])
         pytest.fail("Backend or Database service failed to become ready within the timeout period.")
 
     # Setup the mock warehouse tables in the same Postgres database
@@ -150,7 +150,7 @@ def setup_warehouse_tables():
 @pytest.mark.smoke
 def test_health_endpoint():
     """Verify that calling the healthz endpoint returns HTTP 200 and healthy status."""
-    response = httpx.get(f"{API_URL}/healthz")
+    response = httpx.get(f"{API_URL}/healthz", timeout=30.0)
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
@@ -160,7 +160,7 @@ def test_health_endpoint():
 def test_freshness_poll():
     """Verify that triggering a freshness check executes successfully."""
     headers = {"X-API-Key": API_KEY}
-    response = httpx.post(f"{API_URL}/freshness/poll", headers=headers)
+    response = httpx.post(f"{API_URL}/freshness/poll", headers=headers, timeout=30.0)
     assert response.status_code == 200
     data = response.json()
     assert "checked" in data
@@ -174,7 +174,7 @@ def test_freshness_poll():
 def test_quality_checks_run():
     """Verify that running quality checks executes successfully."""
     headers = {"X-API-Key": API_KEY}
-    response = httpx.post(f"{API_URL}/checks/run", headers=headers)
+    response = httpx.post(f"{API_URL}/checks/run", headers=headers, timeout=60.0)
     assert response.status_code == 200
     data = response.json()
     assert "checks_run" in data
@@ -191,7 +191,7 @@ def test_quality_checks_run():
 @pytest.mark.smoke
 def test_status_endpoint():
     """Verify that retrieving the system status returns details about our tables."""
-    response = httpx.get(f"{API_URL}/status")
+    response = httpx.get(f"{API_URL}/status", timeout=30.0)
     assert response.status_code == 200
     data = response.json()
     assert "summary" in data

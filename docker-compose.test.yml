@@ -21,11 +21,11 @@ services:
       - OBSERVAKIT_API_KEY=test_smoke_key
       # Warehouse configuration (defaults, not strictly required for smoke test)
       - WAREHOUSE_TYPE=postgres
-      - WAREHOUSE_HOST=localhost
+      - WAREHOUSE_HOST=postgres
       - WAREHOUSE_PORT=5432
-      - WAREHOUSE_USER=
-      - WAREHOUSE_PASSWORD=
-      - WAREHOUSE_DB=
+      - WAREHOUSE_USER=observakit
+      - WAREHOUSE_PASSWORD=test_password
+      - WAREHOUSE_DB=observakit
       - WAREHOUSE_SCHEMA=public
     volumes:
       - ./config:/app/config:ro
