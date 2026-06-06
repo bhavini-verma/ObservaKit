@@ -176,8 +176,44 @@ http://localhost:8000/docs
 - Backend service should be accessible on port `8000`
 
 - Docker containers should appear in:
+ 
+ ```bash
+ docker ps
+ ```
+ <img width="1666" height="137" alt="image" src="https://github.com/user-attachments/assets/72c8e455-f603-41b6-9f9b-0199ceadbca3" />
+ 
+ ---
+ 
+ ## 9. Running the Smoke Test
+ 
+ The smoke test automatically builds the test environment stack using `docker-compose.test.yml`, waits for the database and backend services to become healthy, seeds sample warehouse tables, runs freshness and quality checks, and tears the stack down.
+ 
+ ### Prerequisites
+ - **Docker Desktop/Daemon** must be active and running on your system.
+ - **Python 3.10+** environment with project dependencies installed.
+ 
+ ### Setup and Execution
+ 1. Open your terminal in the repository root directory.
+ 2. Ensure your virtual environment is active. If not, activate it:
+    - **Windows (PowerShell)**: `.venv\Scripts\Activate.ps1`
+    - **Linux/macOS**: `source .venv/bin/activate`
+ 3. Run the automated smoke test with `pytest`:
+    ```bash
+    pytest -v -m smoke tests/smoke
+    ```
+ 
+ ### Expected Output
+ A successful smoke test execution will output something similar to:
+ ```text
+ ============================= test session starts =============================
+ collected 4 items
+ 
+ tests/smoke/test_smoke.py::test_health_endpoint PASSED                   [ 25%]
+ tests/smoke/test_smoke.py::test_freshness_poll PASSED                    [ 50%]
+ tests/smoke/test_smoke.py::test_quality_checks_run PASSED                [ 75%]
+ tests/smoke/test_smoke.py::test_status_endpoint PASSED                   [100%]
+ 
+ ============================== 4 passed in 23.45s =============================
+ ```
+ If Docker daemon is stopped, the setup phase will raise a clear error notifying you to start Docker.
 
-```bash
-docker ps
-```
-<img width="1666" height="137" alt="image" src="https://github.com/user-attachments/assets/72c8e455-f603-41b6-9f9b-0199ceadbca3" />

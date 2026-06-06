@@ -1,0 +1,62 @@
+# docker-compose.test.yml
+# Minimal test stack for ObservaKit smoke tests
+# Includes only the backend service and a PostgreSQL metadata database.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: observakit-backend-test
+    ports:
+      - "8005:8000"  # Expose backend on host port 8005 (container runs on 8000)
+    environment:
+      # Database connection for both backend and smoke test
+      - METADATA_DB_HOST=postgres
+      - METADATA_DB_PORT=5432
+      - METADATA_DB_USER=observakit
+      - METADATA_DB_PASSWORD=test_password
+      - METADATA_DB_NAME=observakit
+      # API Key for test authentication
+      - OBSERVAKIT_API_KEY=test_smoke_key
+      # Warehouse configuration (defaults, not strictly required for smoke test)
+      - WAREHOUSE_TYPE=postgres
+      - WAREHOUSE_HOST=localhost
+      - WAREHOUSE_PORT=5432
+      - WAREHOUSE_USER=
+      - WAREHOUSE_PASSWORD=
+      - WAREHOUSE_DB=
+      - WAREHOUSE_SCHEMA=public
+    volumes:
+      - ./config:/app/config:ro
+      - ./checks:/app/checks:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: observakit-postgres-test
+    environment:
+      POSTGRES_USER: observakit
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: observakit
+    ports:
+      - "5434:5432"  # Host port 5434 maps to container 5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U observakit"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  # No persistent volumes needed for smoke tests; data is transient.
+  # Define empty volumes to satisfy Docker Compose schema if desired.
+  dummy:

@@ -77,4 +77,7 @@ warn_unused_ignores = true
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "--tb=short"
+markers = [
+    "smoke: end-to-end smoke tests",
+]
 # Enable coverage with: pytest --cov=backend --cov=alerts --cov=connectors --cov-fail-under=70
