@@ -1,17 +1,71 @@
 # Discovered Bugs & Issues
 
-No functional bugs were discovered in the application source code during the execution of the 120 unit and integration tests or the automated smoke test suite. All tests compiled and ran cleanly.
+## 1. Docker Desktop Daemon Offline
 
-## Environment Limitations / Known Issues
+### Description
 
-### 1. Docker Desktop Daemon Offline
+The automated smoke test requires the Docker daemon to build and start the test environment. If Docker Desktop is not running, Docker commands cannot connect to the Docker API.
 
-- **Description**: The automated smoke test requires the Docker daemon to build and boot the test stack. On the local host environment, the Docker Desktop service `com.docker.service` is stopped, preventing Docker commands from connecting to the Docker API.
-- **Steps to reproduce**:
-  1. Open PowerShell.
-  2. Run `pytest -v -m smoke tests/smoke`
-- **Expected behavior**: The smoke test boots the Docker Compose services successfully.
-- **Actual behavior**: The pytest run fails with a descriptive error:
-  `Failed: Docker daemon is not running or unreachable. Please start Docker Desktop/daemon to run the end-to-end smoke test stack.`
-- **Severity**: Low (Environment setup issue).
-- **Remediation**: The user must start Docker Desktop manually or start the `com.docker.service` Windows service with administrative rights.
+### Steps to Reproduce
+
+1. Ensure Docker Desktop is not running.
+2. Open PowerShell or Terminal.
+3. Run:
+
+```bash
+pytest -v -m smoke tests/smoke
+```
+
+### Expected Behavior
+
+The smoke test should start the Docker Compose services and execute successfully.
+
+### Actual Behavior
+
+The test fails with an error indicating that the Docker daemon is unavailable.
+
+### Severity
+
+Low (Environment setup issue)
+
+### Remediation
+
+Start Docker Desktop before running the smoke test.
+
+---
+
+## 2. /status Endpoint Returns HTTP 500
+
+### Description
+
+During smoke test execution, the `/status` endpoint returned an HTTP 500 Internal Server Error instead of the expected HTTP 200 response.
+
+### Steps to Reproduce
+
+1. Start the application and required services.
+2. Run:
+
+```bash
+pytest -v -m smoke tests/smoke
+```
+
+3. Observe the failure in `test_status_endpoint`.
+
+### Expected Behavior
+
+The `/status` endpoint should return HTTP 200 and provide application status information.
+
+### Actual Behavior
+
+The endpoint returns HTTP 500 Internal Server Error.
+
+### Severity
+
+Medium
+
+### Evidence
+
+```text
+FAILED tests/smoke/test_smoke.py::test_status_endpoint
+assert 500 == 200
+```
