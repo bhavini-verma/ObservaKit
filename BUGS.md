@@ -57,7 +57,7 @@ The `/status` endpoint should return HTTP 200 and provide application status inf
 
 ### Actual Behavior
 
-The endpoint returns HTTP 500 Internal Server Error.
+The endpoint returns HTTP 500 Internal Server Error. Smoke test successfully identified a failure in the /status endpoint. CI shows /status returning HTTP 500 instead of HTTP 200. Additional backend investigation is required to determine the root cause.
 
 ### Severity
 
